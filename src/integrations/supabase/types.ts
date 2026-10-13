@@ -14,16 +14,252 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      investments: {
+        Row: {
+          amount: number
+          asset_type: string
+          created_at: string
+          id: string
+          property_id: string | null
+          status: string
+          stock_id: string | null
+          units: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          asset_type: string
+          created_at?: string
+          id?: string
+          property_id?: string | null
+          status?: string
+          stock_id?: string | null
+          units?: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          asset_type?: string
+          created_at?: string
+          id?: string
+          property_id?: string | null
+          status?: string
+          stock_id?: string | null
+          units?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investments_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investments_stock_id_fkey"
+            columns: ["stock_id"]
+            isOneToOne: false
+            referencedRelation: "stocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          admin_note: string | null
+          amount_usd: number
+          created_at: string
+          currency: string
+          id: string
+          investment_id: string
+          network: string
+          reviewed_at: string | null
+          status: string
+          tx_hash: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount_usd: number
+          created_at?: string
+          currency: string
+          id?: string
+          investment_id: string
+          network: string
+          reviewed_at?: string | null
+          status?: string
+          tx_hash: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount_usd?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          investment_id?: string
+          network?: string
+          reviewed_at?: string | null
+          status?: string
+          tx_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          country: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone?: string | null
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          annual_yield: number
+          city_ar: string
+          city_en: string
+          created_at: string
+          funded: number
+          id: string
+          image_url: string
+          min_investment: number
+          property_type: string
+          title_ar: string
+          title_en: string
+          total_value: number
+        }
+        Insert: {
+          annual_yield: number
+          city_ar: string
+          city_en: string
+          created_at?: string
+          funded?: number
+          id?: string
+          image_url: string
+          min_investment?: number
+          property_type: string
+          title_ar: string
+          title_en: string
+          total_value: number
+        }
+        Update: {
+          annual_yield?: number
+          city_ar?: string
+          city_en?: string
+          created_at?: string
+          funded?: number
+          id?: string
+          image_url?: string
+          min_investment?: number
+          property_type?: string
+          title_ar?: string
+          title_en?: string
+          total_value?: number
+        }
+        Relationships: []
+      }
+      stocks: {
+        Row: {
+          change_pct: number
+          created_at: string
+          dividend_yield: number
+          exchange: string
+          id: string
+          name_ar: string
+          name_en: string
+          price: number
+          sector: string
+          symbol: string
+        }
+        Insert: {
+          change_pct?: number
+          created_at?: string
+          dividend_yield?: number
+          exchange: string
+          id?: string
+          name_ar: string
+          name_en: string
+          price: number
+          sector: string
+          symbol: string
+        }
+        Update: {
+          change_pct?: number
+          created_at?: string
+          dividend_yield?: number
+          exchange?: string
+          id?: string
+          name_ar?: string
+          name_en?: string
+          price?: number
+          sector?: string
+          symbol?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      review_payment: {
+        Args: { _approve: boolean; _note?: string; _payment_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +386,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
