@@ -18,6 +18,8 @@ const dict = {
   or: { en: "or", ar: "أو" },
   haveAccount: { en: "Already have an account?", ar: "لديك حساب؟" },
   noAccount: { en: "New here?", ar: "مستخدم جديد؟" },
+  alreadyExists: { en: "This email is already registered. Log in, or use Continue with Google if you signed up with Google.", ar: "هذا البريد مسجّل مسبقاً. سجّل الدخول، أو استخدم المتابعة عبر Google إن كنت سجلت بها." },
+  badLogin: { en: "Wrong email or password. If you signed up with Google, use Continue with Google.", ar: "البريد أو كلمة المرور غير صحيحة. إن سجلت عبر Google فاستخدم زر المتابعة عبر Google." },
   checkEmail: { en: "Check your email to confirm your account.", ar: "تحقق من بريدك لتأكيد الحساب." },
   home: { en: "Home", ar: "الرئيسية" },
   stocks: { en: "Stocks", ar: "الأسهم" },

@@ -34,21 +34,32 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const isSignup = mode === "signup";
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) navigate({ to: "/dashboard", replace: true });
+    });
+    const { data } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session) navigate({ to: "/dashboard", replace: true });
+    });
+    return () => data.subscription.unsubscribe();
+  }, [navigate]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     if (isSignup) {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email, password,
-        options: { emailRedirectTo: window.location.origin + "/dashboard", data: { full_name: name } },
+        options: { emailRedirectTo: window.location.origin + "/auth", data: { full_name: name } },
       });
       setBusy(false);
       if (error) { toast.error(error.message); return; }
+      if (data.user && data.user.identities?.length === 0) { toast.error(t("alreadyExists")); return; }
       toast.success(t("checkEmail"));
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(false);
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(error.message.includes("Invalid login") ? t("badLogin") : error.message); return; }
       navigate({ to: "/dashboard" });
     }
   }
