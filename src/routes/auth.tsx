@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (s: Record<string, unknown>) => ({ mode: s.mode === "signup" ? "signup" : "login" }) as { mode: "login" | "signup" },
+  validateSearch: (s: Record<string, unknown>) => ({ mode: s["mode"] === "signup" ? "signup" : "login" }) as { mode: "login" | "signup" },
   head: () => ({
     meta: [
       { title: "Sign in — INVESTERRA" },
@@ -43,19 +43,19 @@ function AuthPage() {
         options: { emailRedirectTo: window.location.origin + "/dashboard", data: { full_name: name } },
       });
       setBusy(false);
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message);
       toast.success(t("checkEmail"));
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(false);
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message);
       navigate({ to: "/dashboard" });
     }
   }
 
   async function google() {
     const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/auth" });
-    if (r.error) return toast.error(String(r.error.message ?? r.error));
+    if (r.error) { toast.error(String(r.error.message ?? r.error));
     if (r.redirected) return;
     navigate({ to: "/dashboard" });
   }

@@ -47,7 +47,7 @@ export const paymentsQ = queryOptions({
   },
 });
 
-type Inv = Awaited<ReturnType<typeof investmentsQ.queryFn>>[number];
+type Inv = Awaited<ReturnType<NonNullable<typeof investmentsQ.queryFn>>>[number];
 
 export function annualRate(i: Inv) {
   if (i.asset_type === "property") return Number(i.properties?.annual_yield ?? 0) / 100;

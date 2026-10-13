@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/invest")({
-  validateSearch: (s: Record<string, unknown>) => ({ type: s.type === "stock" ? "stock" : "property", id: String(s.id ?? "") }) as { type: "stock" | "property"; id: string },
+  validateSearch: (s: Record<string, unknown>) => ({ type: s["type"] === "stock" ? "stock" : "property", id: String(s["id"] ?? "") }) as { type: "stock" | "property"; id: string },
   head: () => ({ meta: [{ title: "Invest — INVESTERRA" }, { name: "description", content: "Fund an investment with USDT or Bitcoin." }, { property: "og:title", content: "Invest — INVESTERRA" }, { property: "og:description", content: "Fund an investment." }] }),
   loader: ({ context }) => Promise.all([context.queryClient.ensureQueryData(stocksQ), context.queryClient.ensureQueryData(propertiesQ)]),
   component: Invest,
@@ -39,20 +39,20 @@ function Invest() {
   const w = WALLETS[cur];
 
   async function submit() {
-    if (amount < min) return toast.error(`${t("minInvest")}: ${fmtUsd(min, lang)}`);
-    if (tx.trim().length < 10) return toast.error(t("txHash"));
+    if (amount < min) { toast.error(`${t("minInvest")}: ${fmtUsd(min, lang)}`);
+    if (tx.trim().length < 10) { toast.error(t("txHash"));
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
     const { data: inv, error } = await supabase.from("investments").insert({
       user_id: u.user!.id, asset_type: type, stock_id: stock?.id ?? null, property_id: prop?.id ?? null,
       amount, units: stock ? amount / Number(stock.price) : 0,
     }).select().single();
-    if (error) { setBusy(false); return toast.error(error.message); }
+    if (error) { setBusy(false); { toast.error(error.message); }
     const { error: e2 } = await supabase.from("payments").insert({
       user_id: u.user!.id, investment_id: inv.id, currency: cur, network: w.network, amount_usd: amount, tx_hash: tx.trim(),
     });
     setBusy(false);
-    if (e2) return toast.error(e2.message);
+    if (e2) { toast.error(e2.message);
     toast.success(t("submitted"));
     qc.invalidateQueries();
     navigate({ to: "/transactions" });

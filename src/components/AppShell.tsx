@@ -54,7 +54,7 @@ export function AppShell() {
         <main className="mx-auto max-w-6xl p-5 md:p-10"><Outlet /></main>
       </div>
       <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t border-border bg-surface/95 py-2 backdrop-blur md:hidden">
-        {[nav[0], nav[1], nav[2], nav[3], isAdmin ? items[items.length - 1] : nav[5]].map((n) => (
+        {(isAdmin ? [...nav.slice(0, 4), items[items.length - 1]!] : [...nav.slice(0, 4), nav[5]!]).map((n) => (
           <Link key={n.to} to={n.to} className="flex flex-col items-center gap-1 px-2 text-[11px] text-muted-foreground" activeProps={{ className: "!text-primary" }}>
             <n.icon className="h-5 w-5" />{t(n.key)}
           </Link>
@@ -64,7 +64,7 @@ export function AppShell() {
   );
 }
 
-export function PageTitle({ title, sub }: { title: string; sub?: string }) {
+export function PageTitle({ title, sub }: { title: string; sub?: string | undefined }) {
   return (
     <div className="mb-8">
       <h1 className="text-2xl font-bold md:text-3xl">{title}</h1>
