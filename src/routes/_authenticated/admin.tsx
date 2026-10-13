@@ -36,8 +36,8 @@ function Admin() {
 
   async function review(id: string, approve: boolean) {
     const note = approve ? null : prompt(t("reject")) ?? null;
-    const { error } = await supabase.rpc("review_payment", { _payment_id: id, _approve: approve, _note: note ?? undefined });
-    if (error) { toast.error(error.message);
+    const { error } = await supabase.rpc("review_payment", { _payment_id: id, _approve: approve, ...(note ? { _note: note } : {}) });
+    if (error) { toast.error(error.message); return; }
     toast.success(approve ? t("confirmed") : t("rejected"));
     qc.invalidateQueries();
   }

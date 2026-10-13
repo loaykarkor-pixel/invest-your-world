@@ -39,20 +39,20 @@ function Invest() {
   const w = WALLETS[cur];
 
   async function submit() {
-    if (amount < min) { toast.error(`${t("minInvest")}: ${fmtUsd(min, lang)}`);
-    if (tx.trim().length < 10) { toast.error(t("txHash"));
+    if (amount < min) { toast.error(`${t("minInvest")}: ${fmtUsd(min, lang)}`); return; }
+    if (tx.trim().length < 10) { toast.error(t("txHash")); return; }
     setBusy(true);
     const { data: u } = await supabase.auth.getUser();
     const { data: inv, error } = await supabase.from("investments").insert({
       user_id: u.user!.id, asset_type: type, stock_id: stock?.id ?? null, property_id: prop?.id ?? null,
       amount, units: stock ? amount / Number(stock.price) : 0,
     }).select().single();
-    if (error) { setBusy(false); { toast.error(error.message); }
+    if (error) { setBusy(false); toast.error(error.message); return; }
     const { error: e2 } = await supabase.from("payments").insert({
       user_id: u.user!.id, investment_id: inv.id, currency: cur, network: w.network, amount_usd: amount, tx_hash: tx.trim(),
     });
     setBusy(false);
-    if (e2) { toast.error(e2.message);
+    if (e2) { toast.error(e2.message); return; }
     toast.success(t("submitted"));
     qc.invalidateQueries();
     navigate({ to: "/transactions" });
