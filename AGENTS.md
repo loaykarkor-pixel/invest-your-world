@@ -11,3 +11,4 @@
 
 - UI strings live in src/lib/i18n.tsx (ar/en dict); add both languages for every new string — app is bilingual RTL/LTR.
 - Crypto payment approval runs through the review_payment SQL function so only admins can activate investments.
+- New signups only get the "user" role; admins are granted manually in user_roles (never automatically).
