@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -8,6 +8,7 @@ import { Logo } from "./index";
 import { LangToggle } from "@/components/LangToggle";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authError } from "@/lib/auth-errors";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>) => ({ mode: s["mode"] === "signup" ? "signup" : "login" }) as { mode: "login" | "signup" },
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { mode } = Route.useSearch();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -53,20 +54,27 @@ function AuthPage() {
         options: { emailRedirectTo: window.location.origin + "/auth", data: { full_name: name } },
       });
       setBusy(false);
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(authError(error.message, lang)); return; }
       if (data.user && data.user.identities?.length === 0) { toast.error(t("alreadyExists")); return; }
       toast.success(t("checkEmail"));
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setBusy(false);
-      if (error) { toast.error(error.message.includes("Invalid login") ? t("badLogin") : error.message); return; }
+      if (error) { toast.error(authError(error.message, lang)); return; }
       navigate({ to: "/dashboard" });
     }
   }
 
+  async function forgot() {
+    if (!email) { toast.error(t("enterEmailFirst")); return; }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" });
+    if (error) { toast.error(authError(error.message, lang)); return; }
+    toast.success(t("resetSent"));
+  }
+
   async function google() {
     const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/auth" });
-    if (r.error) { toast.error(String(r.error.message ?? r.error)); return; }
+    if (r.error) { toast.error(authError(String(r.error.message ?? r.error), lang)); return; }
     if (r.redirected) return;
     navigate({ to: "/dashboard" });
   }
@@ -83,6 +91,7 @@ function AuthPage() {
           )}
           <div className="space-y-1.5"><Label>{t("email")}</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>{t("password")}</Label><Input type="password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+          {!isSignup && <button type="button" onClick={forgot} className="text-sm text-primary">{t("forgot")}</button>}
           <button disabled={busy} className="w-full rounded-xl bg-gradient-gold py-3 font-semibold text-primary-foreground shadow-gold disabled:opacity-60">
             {isSignup ? t("signup") : t("login")}
           </button>
