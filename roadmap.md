@@ -4,5 +4,5 @@
 - [x] Arabic/English error messages for auth
 - [x] Stop auto-granting admin to first signup
 - [x] Verify auth + report
-- [ ] Decide admin role for fadelryad3@gmail.com (waiting on user)
+- [x] Admin moved to ryad0534621@gmail.com; removed from fadelryad3@gmail.com
 - [ ] Real wallet addresses (blocked: waiting on user)
