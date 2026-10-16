@@ -141,17 +141,9 @@ function Tx() {
 
     setBusy(true);
     try {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
-      if (!authData.user) throw new Error(lang === "ar" ? "يرجى تسجيل الدخول مجدداً." : "Please sign in again.");
-
-      const { error } = await supabase.from("withdrawal_requests").insert({
-        user_id: authData.user.id,
-        amount: value,
-        currency: "USDT",
-        network: "TRC20",
-        destination_address: wallet,
-        status: "pending",
+      const { error } = await supabase.rpc("request_usdt_withdrawal", {
+        _amount: value,
+        _destination_address: wallet,
       });
 
       if (error) throw error;
