@@ -64,6 +64,19 @@ const depositsQ = {
   },
 };
 
+
+const walletLedgerQ = {
+  queryKey: ["my-wallet-ledger"],
+  queryFn: async () => {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!userData.user) throw new Error("Please sign in again.");
+    const { data, error } = await supabase.from("wallet_ledger").select("id, amount, currency, entry_type, note, created_at").eq("user_id", userData.user.id).order("created_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+};
+
 function Tx() {
   const { t, lang } = useI18n();
   const { data } = useSuspenseQuery(paymentsQ);
@@ -71,6 +84,8 @@ function Tx() {
   const { data: withdrawals, isLoading, error: withdrawalsError } = useQuery(withdrawalsQ);
   const { data: depositAddress, error: depositAddressError } = useQuery(depositAddressQ);
   const { data: deposits, error: depositsError } = useQuery(depositsQ);
+  const { data: ledger, error: ledgerError } = useQuery(walletLedgerQ);
+  const walletBalance = (ledger ?? []).reduce((sum, entry) => sum + Number(entry.amount), 0);
   const [depositAmount, setDepositAmount] = useState("");
   const [txHash, setTxHash] = useState("");
   const [depositBusy, setDepositBusy] = useState(false);
@@ -156,6 +171,7 @@ function Tx() {
   return (
     <div className="space-y-8">
       <PageTitle title={t("transactions")} />
+      <section className="rounded-2xl border border-border bg-card p-5"><p className="text-sm text-muted-foreground">{lang === "ar" ? "رصيد المحفظة المؤكد" : "Confirmed wallet balance"}</p><p className="mt-1 text-2xl font-bold">{walletBalance.toLocaleString(undefined, { maximumFractionDigits: 8 })} USDT</p>{ledgerError && <p className="mt-2 text-sm text-destructive">{lang === "ar" ? "تعذر تحميل الرصيد." : "Could not load balance."}</p>}<p className="mt-2 text-xs text-muted-foreground">{lang === "ar" ? "يعكس هذا الرصيد قيود دفتر الحساب فقط؛ لا يعني وجود أموال متاحة للسحب في المحفظة الخارجية." : "This is the internal ledger balance only; it does not guarantee funds are available in the external wallet."}</p></section>
 
 
       <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
