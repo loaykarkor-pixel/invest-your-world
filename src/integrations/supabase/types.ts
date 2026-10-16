@@ -127,6 +127,18 @@ export type Database = {
         Update: { id?: string; user_id?: string; amount_claimed?: number; amount_confirmed?: number | null; currency?: string; network?: string; deposit_address?: string; tx_hash?: string | null; status?: string; admin_note?: string | null; created_at?: string; reviewed_at?: string | null; verified_at?: string | null; reviewed_by?: string | null }
         Relationships: []
       }
+      bitcoin_deposit_addresses: {
+        Row: { id: string; user_id: string; network: string; currency: string; address: string; derivation_index: number | null; active: boolean; created_at: string; created_by: string | null }
+        Insert: { id?: string; user_id: string; network?: string; currency?: string; address: string; derivation_index?: number | null; active?: boolean; created_at?: string; created_by?: string | null }
+        Update: { id?: string; user_id?: string; network?: string; currency?: string; address?: string; derivation_index?: number | null; active?: boolean; created_at?: string; created_by?: string | null }
+        Relationships: []
+      }
+      bitcoin_deposit_requests: {
+        Row: { id: string; user_id: string; amount_claimed: number; amount_confirmed: number | null; currency: string; network: string; deposit_address: string; tx_hash: string | null; status: string; admin_note: string | null; created_at: string; reviewed_at: string | null; reviewed_by: string | null }
+        Insert: { id?: string; user_id: string; amount_claimed: number; amount_confirmed?: number | null; currency?: string; network?: string; deposit_address: string; tx_hash?: string | null; status?: string; admin_note?: string | null; created_at?: string; reviewed_at?: string | null; reviewed_by?: string | null }
+        Update: { id?: string; user_id?: string; amount_claimed?: number; amount_confirmed?: number | null; currency?: string; network?: string; deposit_address?: string; tx_hash?: string | null; status?: string; admin_note?: string | null; created_at?: string; reviewed_at?: string | null; reviewed_by?: string | null }
+        Relationships: []
+      }
       wallet_ledger: {
         Row: { id: string; user_id: string; entry_type: string; amount: number; currency: string; reference_id: string; note: string | null; created_at: string; created_by: string | null }
         Insert: { id?: string; user_id: string; entry_type: string; amount: number; currency?: string; reference_id: string; note?: string | null; created_at?: string; created_by?: string | null }
@@ -318,6 +330,7 @@ export type Database = {
         Returns: undefined
       }
 
+      review_bitcoin_deposit_request: { Args: { _request_id: string; _confirm: boolean; _confirmed_amount?: number | null; _note?: string | null }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
