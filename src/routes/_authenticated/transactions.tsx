@@ -65,6 +65,29 @@ const depositsQ = {
 };
 
 
+const bitcoinAddressQ = {
+  queryKey: ["my-bitcoin-deposit-address"],
+  queryFn: async () => {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!userData.user) throw new Error("Please sign in again.");
+    const { data, error } = await supabase.from("bitcoin_deposit_addresses").select("address, network, currency").eq("user_id", userData.user.id).eq("active", true).maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+};
+const bitcoinDepositsQ = {
+  queryKey: ["my-bitcoin-deposit-requests"],
+  queryFn: async () => {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!userData.user) throw new Error("Please sign in again.");
+    const { data, error } = await supabase.from("bitcoin_deposit_requests").select("id, amount_claimed, amount_confirmed, deposit_address, tx_hash, status, admin_note, created_at").eq("user_id", userData.user.id).order("created_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+};
+
 const walletLedgerQ = {
   queryKey: ["my-wallet-ledger"],
   queryFn: async () => {
@@ -85,7 +108,13 @@ function Tx() {
   const { data: depositAddress, error: depositAddressError } = useQuery(depositAddressQ);
   const { data: deposits, error: depositsError } = useQuery(depositsQ);
   const { data: ledger, error: ledgerError } = useQuery(walletLedgerQ);
-  const walletBalance = (ledger ?? []).reduce((sum, entry) => sum + Number(entry.amount), 0);
+  const { data: bitcoinAddress, error: bitcoinAddressError } = useQuery(bitcoinAddressQ);
+  const { data: bitcoinDeposits, error: bitcoinDepositsError } = useQuery(bitcoinDepositsQ);
+  const walletBalance = (ledger ?? []).filter(entry => entry.currency === "USDT").reduce((sum, entry) => sum + Number(entry.amount), 0);
+  const bitcoinBalance = (ledger ?? []).filter(entry => entry.currency === "BTC").reduce((sum, entry) => sum + Number(entry.amount), 0);
+  const [bitcoinAmount, setBitcoinAmount] = useState("");
+  const [bitcoinTxHash, setBitcoinTxHash] = useState("");
+  const [bitcoinBusy, setBitcoinBusy] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [txHash, setTxHash] = useState("");
   const [depositBusy, setDepositBusy] = useState(false);
@@ -160,6 +189,44 @@ function Tx() {
     finally { setDepositBusy(false); }
   }
 
+  async function submitBitcoinDeposit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const value = Number(bitcoinAmount);
+    const hash = bitcoinTxHash.trim().toLowerCase();
+    if (!Number.isFinite(value) || value <= 0 || !/^[0-9a-f]{64}$/.test(hash)) {
+      toast.error(lang === "ar" ? "أدخل مبلغ BTC صحيحاً ومعرّف معاملة من 64 خانة." : "Enter a valid BTC amount and 64-character transaction ID.");
+      return;
+    }
+    if (!bitcoinAddress?.address) {
+      toast.error(lang === "ar" ? "لم يُخصص عنوان BTC لهذا الحساب بعد." : "No BTC address is assigned to this account yet.");
+      return;
+    }
+    setBitcoinBusy(true);
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!userData.user) throw new Error(lang === "ar" ? "يرجى تسجيل الدخول مجدداً." : "Please sign in again.");
+      const { error } = await supabase.from("bitcoin_deposit_requests").insert({
+        user_id: userData.user.id,
+        amount_claimed: value,
+        deposit_address: bitcoinAddress.address,
+        network: "BITCOIN_MAINNET",
+        currency: "BTC",
+        tx_hash: hash,
+        status: "pending_verification",
+      });
+      if (error) throw error;
+      toast.success(lang === "ar" ? "أُرسل طلب BTC للتحقق؛ لم يُضف الرصيد بعد." : "BTC deposit submitted for manual verification; balance not credited yet.");
+      setBitcoinAmount("");
+      setBitcoinTxHash("");
+      await qc.invalidateQueries({ queryKey: ["my-bitcoin-deposit-requests"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : (lang === "ar" ? "تعذر إرسال طلب BTC." : "Could not submit BTC request."));
+    } finally {
+      setBitcoinBusy(false);
+    }
+  }
+
   const statusLabel: Record<string, string> = {
     pending: lang === "ar" ? "قيد المراجعة" : "Pending review",
     approved: lang === "ar" ? "تمت الموافقة" : "Approved",
@@ -181,6 +248,15 @@ function Tx() {
         {depositAddress?.address ? <div className="rounded-xl border border-border p-3"><p className="mb-1 text-xs text-muted-foreground">{lang === "ar" ? "عنوانك المخصص" : "Your assigned address"}</p><p className="break-all font-mono text-sm">{depositAddress.address}</p><button type="button" className="mt-2 rounded-lg border border-border px-3 py-1 text-sm" onClick={() => { void navigator.clipboard?.writeText(depositAddress.address); toast.success(lang === "ar" ? "تم نسخ العنوان" : "Address copied"); }}>{lang === "ar" ? "نسخ العنوان" : "Copy address"}</button></div> : <p className="rounded-xl border border-border p-3 text-sm text-muted-foreground">{lang === "ar" ? "لم يتم تخصيص عنوان إيداع لهذا الحساب بعد. لا ترسل الأموال إلى عنوان غير مؤكد." : "No deposit address has been assigned to this account yet. Do not send funds to an unverified address."}</p>}
         <form onSubmit={submitDeposit} className="space-y-3"><div className="space-y-1.5"><Label>{lang === "ar" ? "المبلغ المحوّل (USDT)" : "Amount sent (USDT)"}</Label><Input type="number" min="0.000001" step="0.000001" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} required /></div><div className="space-y-1.5"><Label>{lang === "ar" ? "بصمة المعاملة (TXID)" : "Transaction hash (TXID)"}</Label><Input value={txHash} onChange={e => setTxHash(e.target.value)} placeholder="64-character transaction hash" autoComplete="off" spellCheck={false} required /></div><button type="submit" disabled={depositBusy || !depositAddress?.address} className="w-full rounded-xl bg-gradient-gold py-3 font-semibold text-primary-foreground disabled:opacity-60">{depositBusy ? (lang === "ar" ? "جارٍ الإرسال..." : "Submitting...") : (lang === "ar" ? "إرسال للتحقق" : "Submit for verification")}</button></form>
         <div className="space-y-2"><h3 className="font-semibold">{lang === "ar" ? "سجل الإيداعات" : "Deposit history"}</h3>{depositsError && <p className="text-sm text-destructive">{lang === "ar" ? "تعذر تحميل سجل الإيداعات." : "Could not load deposits."}</p>}{deposits?.map(d => <div key={d.id} className="space-y-1 rounded-xl border border-border p-3"><div className="flex flex-wrap justify-between gap-2"><span className="font-semibold">{Number(d.amount_confirmed ?? d.amount_claimed)} USDT</span><StatusBadge s={d.status} /></div>{d.tx_hash && <a className="break-all text-xs underline" href={`https://tronscan.org/#/transaction/${d.tx_hash}`} target="_blank" rel="noreferrer">{lang === "ar" ? "عرض المعاملة على TronScan" : "View on TronScan"}</a>}{d.admin_note && <p className="text-sm text-muted-foreground">{d.admin_note}</p>}</div>)}</div>
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
+        <h2 className="text-lg font-bold">{lang === "ar" ? "إيداع Bitcoin (BTC)" : "Deposit Bitcoin (BTC)"}</h2>
+        <p className="text-sm text-muted-foreground">{lang === "ar" ? "الشبكة: Bitcoin Mainnet فقط. تحقق من العنوان قبل الإرسال؛ الطلب يحتاج مراجعة يدوية ولا يُضاف الرصيد تلقائياً." : "Network: Bitcoin Mainnet only. Verify the address before sending; requests require manual review and are not credited automatically."}</p>
+        {bitcoinAddressError && <p className="text-sm text-destructive">{lang === "ar" ? "تعذر تحميل عنوان BTC. تأكد من تطبيق ترحيل قاعدة البيانات." : "Could not load BTC address. Ensure the database migration is applied."}</p>}
+        {bitcoinAddress?.address ? <div className="rounded-xl border border-border p-3"><p className="mb-1 text-xs text-muted-foreground">{lang === "ar" ? "عنوان BTC المخصص" : "Assigned BTC address"}</p><p className="break-all font-mono text-sm">{bitcoinAddress.address}</p><button type="button" className="mt-2 rounded-lg border border-border px-3 py-1 text-sm" onClick={() => { void navigator.clipboard?.writeText(bitcoinAddress.address); toast.success(lang === "ar" ? "تم نسخ العنوان" : "Address copied"); }}>{lang === "ar" ? "نسخ العنوان" : "Copy address"}</button></div> : <p className="rounded-xl border border-border p-3 text-sm text-muted-foreground">{lang === "ar" ? "لم يُخصص عنوان BTC لهذا الحساب بعد. لا ترسل أي أموال حتى يظهر عنوان مخصص." : "No BTC address is assigned yet. Do not send funds until an assigned address appears."}</p>}
+        <form onSubmit={submitBitcoinDeposit} className="space-y-3"><div className="space-y-1.5"><Label>{lang === "ar" ? "المبلغ المحوّل (BTC)" : "Amount sent (BTC)"}</Label><Input type="number" min="0.00000001" step="0.00000001" value={bitcoinAmount} onChange={e => setBitcoinAmount(e.target.value)} required /></div><div className="space-y-1.5"><Label>{lang === "ar" ? "معرّف معاملة Bitcoin (TXID)" : "Bitcoin transaction ID (TXID)"}</Label><Input value={bitcoinTxHash} onChange={e => setBitcoinTxHash(e.target.value)} placeholder="64-character transaction ID" autoComplete="off" spellCheck={false} required /></div><button type="submit" disabled={bitcoinBusy || !bitcoinAddress?.address} className="w-full rounded-xl bg-gradient-gold py-3 font-semibold text-primary-foreground disabled:opacity-60">{bitcoinBusy ? (lang === "ar" ? "جارٍ الإرسال..." : "Submitting...") : (lang === "ar" ? "إرسال للتحقق" : "Submit for verification")}</button></form>
+        <div className="space-y-2"><h3 className="font-semibold">{lang === "ar" ? "سجل إيداعات BTC" : "BTC deposit history"}</h3>{bitcoinDepositsError && <p className="text-sm text-destructive">{lang === "ar" ? "تعذر تحميل سجل BTC." : "Could not load BTC deposit history."}</p>}{bitcoinDeposits?.map(d => <div key={d.id} className="space-y-1 rounded-xl border border-border p-3"><div className="flex flex-wrap justify-between gap-2"><span className="font-semibold">{Number(d.amount_confirmed ?? d.amount_claimed)} BTC</span><StatusBadge s={d.status} /></div>{d.tx_hash && <a className="break-all text-xs underline" href={`https://mempool.space/tx/${d.tx_hash}`} target="_blank" rel="noreferrer">{lang === "ar" ? "عرض المعاملة على شبكة Bitcoin" : "View transaction on Bitcoin network"}</a>}{d.admin_note && <p className="text-sm text-muted-foreground">{d.admin_note}</p>}</div>)}</div>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-border bg-card p-5">
