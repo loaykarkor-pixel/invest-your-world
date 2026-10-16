@@ -26,6 +26,11 @@ const allDepositsQ = queryOptions({ queryKey: ["admin-deposits"], queryFn: async
   if (error) throw error; return data;
 } });
 
+const allBitcoinDepositsQ = queryOptions({ queryKey: ["admin-bitcoin-deposits"], queryFn: async () => {
+  const { data, error } = await supabase.from("bitcoin_deposit_requests").select("id, user_id, amount_claimed, amount_confirmed, deposit_address, tx_hash, status, admin_note, created_at").order("created_at", { ascending: false });
+  if (error) throw error; return data;
+} });
+
 const allPaymentsQ = queryOptions({
   queryKey: ["admin-payments"],
   queryFn: async () => {
@@ -50,6 +55,7 @@ function Admin() {
   const { data } = useSuspenseQuery(allPaymentsQ);
   const { data: withdrawals, error: withdrawalsError } = useQuery(allWithdrawalsQ);
   const { data: deposits, error: depositsError } = useQuery(allDepositsQ);
+  const { data: bitcoinDeposits, error: bitcoinDepositsError } = useQuery(allBitcoinDepositsQ);
   const qc = useQueryClient();
   const pending = data.filter((p) => p.status === "pending");
   const confirmed = data.filter((p) => p.status === "confirmed").reduce((s, p) => s + Number(p.amount_usd), 0);
@@ -63,6 +69,32 @@ function Admin() {
     if (error) { toast.error(error.message); return; }
     toast.success(lang === "ar" ? "تم تحديث حالة الإيداع. لم يُضف ذلك رصيداً تلقائياً." : "Deposit status updated. This does not credit an account balance.");
     qc.invalidateQueries({ queryKey: ["admin-deposits"] });
+  }
+
+  async function reviewBitcoinDeposit(id: string, confirm: boolean, claimedAmount: number) {
+    let confirmedAmount: number | null = null;
+    if (confirm) {
+      const entered = prompt(lang === "ar" ? "أدخل المبلغ الذي تحققت منه فعلياً على شبكة Bitcoin (BTC)" : "Enter the BTC amount you actually verified on the Bitcoin network", String(claimedAmount));
+      if (entered === null) return;
+      confirmedAmount = Number(entered);
+      if (!Number.isFinite(confirmedAmount) || confirmedAmount <= 0) {
+        toast.error(lang === "ar" ? "المبلغ غير صحيح" : "Invalid amount");
+        return;
+      }
+      const verified = window.confirm(lang === "ar"
+        ? "هل تحققت بنفسك من mempool.space أن المعاملة مؤكدة، وأنها أرسلت إلى العنوان المعروض وبالمبلغ الصحيح؟ لا تؤكد اعتماداً على TXID وحده."
+        : "Did you independently verify on mempool.space that the transaction is confirmed, sent to the displayed address, and for the correct amount? Do not confirm based on TXID alone.");
+      if (!verified) return;
+    }
+    const note = confirm ? null : prompt(lang === "ar" ? "سبب الرفض (اختياري)" : "Reason for rejection (optional)") ?? null;
+    const { error } = await supabase.rpc("review_bitcoin_deposit_request", {
+      _request_id: id, _confirm: confirm, _confirmed_amount: confirmedAmount, _note: note,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success(lang === "ar"
+      ? "تم تحديث حالة طلب BTC. هذا الإجراء لا يضيف رصيداً تلقائياً."
+      : "BTC request status updated. This action does not automatically credit a balance.");
+    qc.invalidateQueries({ queryKey: ["admin-bitcoin-deposits"] });
   }
 
   async function reviewWithdrawal(id: string, approve: boolean) {
@@ -114,6 +146,26 @@ function Admin() {
       {depositsError && <p className="text-sm text-destructive">{lang === "ar" ? "تعذر تحميل الإيداعات؛ تأكد من تطبيق الترحيل." : "Could not load deposits; ensure migration is applied."}</p>}
       {deposits?.length === 0 && <p className="text-sm text-muted-foreground">{lang === "ar" ? "لا توجد طلبات إيداع." : "No deposit requests."}</p>}
       <div className="space-y-3">{deposits?.map(d => <div key={d.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-card p-4"><div className="min-w-0 flex-1"><p className="font-semibold">{Number(d.amount_claimed)} USDT · {lang === "ar" ? "المستخدم" : "User"} {d.user_id.slice(0,8)}</p><p className="break-all text-xs text-muted-foreground">{d.deposit_address}</p>{d.tx_hash && <a className="break-all text-xs underline" href={`https://tronscan.org/#/transaction/${d.tx_hash}`} target="_blank" rel="noreferrer">{lang === "ar" ? "افتح المعاملة على TronScan للتحقق" : "Open transaction on TronScan to verify"}</a>}<p className="text-xs text-muted-foreground">{new Date(d.created_at).toLocaleString()}</p>{d.admin_note && <p className="text-xs text-muted-foreground">{d.admin_note}</p>}</div><StatusBadge s={d.status} />{d.status === "pending_verification" && <div className="flex gap-2"><button onClick={() => reviewDeposit(d.id, true, Number(d.amount_claimed))} className="rounded-lg bg-positive px-3 py-1.5 text-sm font-semibold text-primary-foreground">{lang === "ar" ? "تحقق وأكّد" : "Verify & confirm"}</button><button onClick={() => reviewDeposit(d.id, false)} className="rounded-lg border border-negative px-3 py-1.5 text-sm font-semibold text-negative">{t("reject")}</button></div>}</div>)}</div>
+
+      <h2 className="mb-3 mt-8 font-semibold">{lang === "ar" ? "طلبات إيداع Bitcoin (BTC)" : "Bitcoin (BTC) deposit requests"}</h2>
+      {bitcoinDepositsError && <p className="text-sm text-destructive">{lang === "ar" ? "تعذر تحميل طلبات BTC. تأكد من تطبيق ترحيل قاعدة البيانات." : "Could not load BTC requests. Ensure the database migration is applied."}</p>}
+      {bitcoinDeposits?.length === 0 && <p className="text-sm text-muted-foreground">{lang === "ar" ? "لا توجد طلبات BTC." : "No BTC requests."}</p>}
+      <div className="space-y-3">
+        {bitcoinDeposits?.map(d => <div key={d.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-card p-4">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">{Number(d.amount_claimed)} BTC · {lang === "ar" ? "المستخدم" : "User"} {d.user_id.slice(0, 8)}</p>
+            <p className="break-all text-xs text-muted-foreground">{d.deposit_address}</p>
+            {d.tx_hash && <a className="break-all text-xs underline" href={`https://mempool.space/tx/${d.tx_hash}`} target="_blank" rel="noreferrer">{lang === "ar" ? "افتح المعاملة على mempool.space وتحقق منها" : "Open transaction on mempool.space and verify"}</a>}
+            <p className="text-xs text-muted-foreground">{new Date(d.created_at).toLocaleString()}</p>
+            {d.admin_note && <p className="text-xs text-muted-foreground">{d.admin_note}</p>}
+          </div>
+          <StatusBadge s={d.status} />
+          {d.status === "pending_verification" && <div className="flex gap-2">
+            <button onClick={() => reviewBitcoinDeposit(d.id, true, Number(d.amount_claimed))} className="rounded-lg bg-positive px-3 py-1.5 text-sm font-semibold text-primary-foreground">{lang === "ar" ? "تحقق وأكّد" : "Verify & confirm"}</button>
+            <button onClick={() => reviewBitcoinDeposit(d.id, false, Number(d.amount_claimed))} className="rounded-lg border border-negative px-3 py-1.5 text-sm font-semibold text-negative">{t("reject")}</button>
+          </div>}
+        </div>)}
+      </div>
 
       <h2 className="mb-3 mt-8 font-semibold">{t("transactions")}</h2>
       <div className="space-y-3">
