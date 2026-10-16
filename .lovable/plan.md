@@ -170,6 +170,9 @@ Add all new strings to `src/lib/i18n.tsx` in both Arabic and English:
 - `platform_config` is seeded with `deposits_enabled = false`, `withdrawals_enabled = false`, `commission_rate_pct = 10`
 - Existing `investments` and `payments` tables kept unchanged; new ledger runs alongside and will be reconciled when deposits go live
 - Blockchain verification (TronGrid API) is scaffolded but gated behind `deposits_enabled` — the API key slot is prepared but deposits stay manual-review until the key is provided
+- **Operating mode** (`platform_config.operating_mode`): `test` or `production`. Displayed clearly in the admin header and on deposit/withdrawal pages. Test balances stored in a separate `is_test` boolean column on `ledger_accounts` and `ledger_entries` — they can never be mixed with production records
+- **Production activation checklist** displayed in admin Settings tab: each prerequisite (wallet address, blockchain provider, token contract, confirmation rules, security audit, legal approval) must be manually checked off before `operating_mode` can be set to `production`. Unchecked = blocked at the database level
+- Public users cannot change operating mode (RLS + server-side guard)
 - No fabricated properties, regulatory badges, or sample balances labelled as real
 
 ## Files Changed
