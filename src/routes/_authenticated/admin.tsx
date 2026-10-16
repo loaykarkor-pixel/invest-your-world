@@ -92,8 +92,8 @@ function Admin() {
     });
     if (error) { toast.error(error.message); return; }
     toast.success(lang === "ar"
-      ? "تم تحديث حالة طلب BTC. هذا الإجراء لا يضيف رصيداً تلقائياً."
-      : "BTC request status updated. This action does not automatically credit a balance.");
+      ? (confirm ? "تم تأكيد الإيداع وإضافة المبلغ المتحقق منه إلى دفتر الرصيد." : "تم رفض طلب إيداع BTC.")
+      : (confirm ? "Deposit confirmed and verified amount credited to the wallet ledger." : "BTC deposit request rejected."));
     qc.invalidateQueries({ queryKey: ["admin-bitcoin-deposits"] });
   }
 
