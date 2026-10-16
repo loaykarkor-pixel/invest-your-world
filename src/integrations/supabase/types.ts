@@ -115,6 +115,51 @@ export type Database = {
           },
         ]
       }
+      withdrawal_requests: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          currency: string
+          destination_address: string
+          id: string
+          network: string
+          paid_at: string | null
+          reviewed_at: string | null
+          status: string
+          transaction_hash: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount: number
+          created_at?: string
+          currency?: string
+          destination_address: string
+          id?: string
+          network?: string
+          paid_at?: string | null
+          reviewed_at?: string | null
+          status?: string
+          transaction_hash?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          destination_address?: string
+          id?: string
+          network?: string
+          paid_at?: string | null
+          reviewed_at?: string | null
+          status?: string
+          transaction_hash?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           country: string | null
@@ -245,7 +290,15 @@ export type Database = {
     Views: {
       [_ in never]: never
     }
-    Functions: {
+    Functions: {\n      review_withdrawal_request: {
+        Args: {
+          _request_id: string
+          _approve: boolean
+          _note?: string | null
+        }
+        Returns: undefined
+      }
+
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
