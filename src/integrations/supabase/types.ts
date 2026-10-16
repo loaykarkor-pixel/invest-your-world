@@ -290,7 +290,8 @@ export type Database = {
     Views: {
       [_ in never]: never
     }
-    Functions: {\n      review_withdrawal_request: {
+    Functions: {
+      review_withdrawal_request: {
         Args: {
           _request_id: string
           _approve: boolean
