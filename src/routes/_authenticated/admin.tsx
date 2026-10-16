@@ -20,6 +20,12 @@ const allWithdrawalsQ = queryOptions({
   },
 });
 
+
+const allDepositsQ = queryOptions({ queryKey: ["admin-deposits"], queryFn: async () => {
+  const { data, error } = await supabase.from("deposit_requests").select("id, user_id, amount_claimed, amount_confirmed, deposit_address, tx_hash, status, admin_note, created_at").order("created_at", { ascending: false });
+  if (error) throw error; return data;
+} });
+
 const allPaymentsQ = queryOptions({
   queryKey: ["admin-payments"],
   queryFn: async () => {
@@ -43,9 +49,21 @@ function Admin() {
   const { t, lang } = useI18n();
   const { data } = useSuspenseQuery(allPaymentsQ);
   const { data: withdrawals, error: withdrawalsError } = useQuery(allWithdrawalsQ);
+  const { data: deposits, error: depositsError } = useQuery(allDepositsQ);
   const qc = useQueryClient();
   const pending = data.filter((p) => p.status === "pending");
   const confirmed = data.filter((p) => p.status === "confirmed").reduce((s, p) => s + Number(p.amount_usd), 0);
+
+
+  async function reviewDeposit(id: string, confirm: boolean, amount?: number) {
+    let confirmedAmount: number | null = null;
+    if (confirm) { const entered = prompt(lang === "ar" ? "أدخل المبلغ الذي تحققت منه على الشبكة" : "Enter the amount verified on-chain", String(amount ?? "")); if (entered === null) return; confirmedAmount = Number(entered); if (!Number.isFinite(confirmedAmount) || confirmedAmount <= 0) { toast.error(lang === "ar" ? "المبلغ غير صحيح" : "Invalid amount"); return; } }
+    const note = confirm ? null : prompt(lang === "ar" ? "سبب الرفض (اختياري)" : "Reason for rejection (optional)") ?? null;
+    const { error } = await supabase.rpc("review_deposit_request", { _request_id: id, _confirm: confirm, _confirmed_amount: confirmedAmount, _note: note });
+    if (error) { toast.error(error.message); return; }
+    toast.success(lang === "ar" ? "تم تحديث حالة الإيداع. لم يُضف ذلك رصيداً تلقائياً." : "Deposit status updated. This does not credit an account balance.");
+    qc.invalidateQueries({ queryKey: ["admin-deposits"] });
+  }
 
   async function reviewWithdrawal(id: string, approve: boolean) {
     const note = approve ? null : prompt(lang === "ar" ? "سبب الرفض (اختياري)" : "Reason for rejection (optional)") ?? null;
@@ -91,6 +109,12 @@ function Admin() {
           </div>
         ))}
       </div>
+
+      <h2 className="mb-3 mt-8 font-semibold">{lang === "ar" ? "طلبات إيداع USDT" : "USDT deposit requests"}</h2>
+      {depositsError && <p className="text-sm text-destructive">{lang === "ar" ? "تعذر تحميل الإيداعات؛ تأكد من تطبيق الترحيل." : "Could not load deposits; ensure migration is applied."}</p>}
+      {deposits?.length === 0 && <p className="text-sm text-muted-foreground">{lang === "ar" ? "لا توجد طلبات إيداع." : "No deposit requests."}</p>}
+      <div className="space-y-3">{deposits?.map(d => <div key={d.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-card p-4"><div className="min-w-0 flex-1"><p className="font-semibold">{Number(d.amount_claimed)} USDT · {lang === "ar" ? "المستخدم" : "User"} {d.user_id.slice(0,8)}</p><p className="break-all text-xs text-muted-foreground">{d.deposit_address}</p>{d.tx_hash && <a className="break-all text-xs underline" href={`https://tronscan.org/#/transaction/${d.tx_hash}`} target="_blank" rel="noreferrer">{lang === "ar" ? "افتح المعاملة على TronScan للتحقق" : "Open transaction on TronScan to verify"}</a>}<p className="text-xs text-muted-foreground">{new Date(d.created_at).toLocaleString()}</p>{d.admin_note && <p className="text-xs text-muted-foreground">{d.admin_note}</p>}</div><StatusBadge s={d.status} />{d.status === "pending_verification" && <div className="flex gap-2"><button onClick={() => reviewDeposit(d.id, true, Number(d.amount_claimed))} className="rounded-lg bg-positive px-3 py-1.5 text-sm font-semibold text-primary-foreground">{lang === "ar" ? "تحقق وأكّد" : "Verify & confirm"}</button><button onClick={() => reviewDeposit(d.id, false)} className="rounded-lg border border-negative px-3 py-1.5 text-sm font-semibold text-negative">{t("reject")}</button></div>}</div>)}</div>
+
       <h2 className="mb-3 mt-8 font-semibold">{t("transactions")}</h2>
       <div className="space-y-3">
         {data.length === 0 && <p className="text-muted-foreground">{t("empty")}</p>}
