@@ -127,6 +127,12 @@ export type Database = {
         Update: { id?: string; user_id?: string; amount_claimed?: number; amount_confirmed?: number | null; currency?: string; network?: string; deposit_address?: string; tx_hash?: string | null; status?: string; admin_note?: string | null; created_at?: string; reviewed_at?: string | null; verified_at?: string | null; reviewed_by?: string | null }
         Relationships: []
       }
+      wallet_ledger: {
+        Row: { id: string; user_id: string; entry_type: string; amount: number; currency: string; reference_id: string; note: string | null; created_at: string; created_by: string | null }
+        Insert: { id?: string; user_id: string; entry_type: string; amount: number; currency?: string; reference_id: string; note?: string | null; created_at?: string; created_by?: string | null }
+        Update: { id?: string; user_id?: string; entry_type?: string; amount?: number; currency?: string; reference_id?: string; note?: string | null; created_at?: string; created_by?: string | null }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           admin_note: string | null
