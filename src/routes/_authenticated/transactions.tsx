@@ -40,11 +40,40 @@ const withdrawalsQ = {
   },
 };
 
+
+const depositAddressQ = {
+  queryKey: ["my-deposit-address"],
+  queryFn: async () => {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!userData.user) throw new Error("Please sign in again.");
+    const { data, error } = await supabase.from("deposit_addresses").select("address, network, currency").eq("user_id", userData.user.id).eq("active", true).maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+};
+const depositsQ = {
+  queryKey: ["my-deposit-requests"],
+  queryFn: async () => {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!userData.user) throw new Error("Please sign in again.");
+    const { data, error } = await supabase.from("deposit_requests").select("id, amount_claimed, amount_confirmed, deposit_address, tx_hash, status, admin_note, created_at").eq("user_id", userData.user.id).order("created_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+};
+
 function Tx() {
   const { t, lang } = useI18n();
   const { data } = useSuspenseQuery(paymentsQ);
   const qc = useQueryClient();
   const { data: withdrawals, isLoading, error: withdrawalsError } = useQuery(withdrawalsQ);
+  const { data: depositAddress, error: depositAddressError } = useQuery(depositAddressQ);
+  const { data: deposits, error: depositsError } = useQuery(depositsQ);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [txHash, setTxHash] = useState("");
+  const [depositBusy, setDepositBusy] = useState(false);
 
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
@@ -94,6 +123,28 @@ function Tx() {
     }
   }
 
+
+  async function submitDeposit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const value = Number(depositAmount);
+    const hash = txHash.trim();
+    if (!Number.isFinite(value) || value <= 0 || !/^([0-9a-fA-F]{64})$/.test(hash)) {
+      toast.error(lang === "ar" ? "أدخل مبلغاً صحيحاً وبصمة تحويل من 64 خانة." : "Enter a valid amount and a 64-character transaction hash."); return;
+    }
+    if (!depositAddress?.address) { toast.error(lang === "ar" ? "لا يوجد عنوان إيداع مخصص لحسابك بعد." : "No deposit address is assigned to your account yet."); return; }
+    setDepositBusy(true);
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!userData.user) throw new Error(lang === "ar" ? "يرجى تسجيل الدخول مجدداً." : "Please sign in again.");
+      const { error } = await supabase.from("deposit_requests").insert({ user_id: userData.user.id, amount_claimed: value, deposit_address: depositAddress.address, network: "TRC20", currency: "USDT", tx_hash: hash, status: "pending_verification" });
+      if (error) throw error;
+      toast.success(lang === "ar" ? "تم إرسال التحويل للتحقق. لن يُضاف أي رصيد قبل التحقق." : "Submitted for verification. No balance is credited before verification.");
+      setDepositAmount(""); setTxHash(""); await qc.invalidateQueries({ queryKey: ["my-deposit-requests"] });
+    } catch (err) { toast.error(err instanceof Error ? err.message : (lang === "ar" ? "تعذر إرسال الطلب." : "Could not submit request.")); }
+    finally { setDepositBusy(false); }
+  }
+
   const statusLabel: Record<string, string> = {
     pending: lang === "ar" ? "قيد المراجعة" : "Pending review",
     approved: lang === "ar" ? "تمت الموافقة" : "Approved",
@@ -105,6 +156,16 @@ function Tx() {
   return (
     <div className="space-y-8">
       <PageTitle title={t("transactions")} />
+
+
+      <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
+        <h2 className="text-lg font-bold">{lang === "ar" ? "إيداع USDT عبر TRC20" : "Deposit USDT via TRC20"}</h2>
+        <p className="text-sm text-muted-foreground">{lang === "ar" ? "أرسل فقط إلى العنوان المخصص أدناه. أرسل بصمة المعاملة بعد التحويل؛ الطلب يبقى قيد التحقق ولا يُضاف رصيد تلقائياً." : "Send only to your assigned address. Submit the transaction hash after transfer; deposits remain pending and no balance is credited automatically."}</p>
+        {depositAddressError && <p className="text-sm text-destructive">{lang === "ar" ? "تعذر تحميل عنوان الإيداع. تحقق من إعداد قاعدة البيانات." : "Could not load deposit address. Check database setup."}</p>}
+        {depositAddress?.address ? <div className="rounded-xl border border-border p-3"><p className="mb-1 text-xs text-muted-foreground">{lang === "ar" ? "عنوانك المخصص" : "Your assigned address"}</p><p className="break-all font-mono text-sm">{depositAddress.address}</p><button type="button" className="mt-2 rounded-lg border border-border px-3 py-1 text-sm" onClick={() => { void navigator.clipboard?.writeText(depositAddress.address); toast.success(lang === "ar" ? "تم نسخ العنوان" : "Address copied"); }}>{lang === "ar" ? "نسخ العنوان" : "Copy address"}</button></div> : <p className="rounded-xl border border-border p-3 text-sm text-muted-foreground">{lang === "ar" ? "لم يتم تخصيص عنوان إيداع لهذا الحساب بعد. لا ترسل الأموال إلى عنوان غير مؤكد." : "No deposit address has been assigned to this account yet. Do not send funds to an unverified address."}</p>}
+        <form onSubmit={submitDeposit} className="space-y-3"><div className="space-y-1.5"><Label>{lang === "ar" ? "المبلغ المحوّل (USDT)" : "Amount sent (USDT)"}</Label><Input type="number" min="0.000001" step="0.000001" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} required /></div><div className="space-y-1.5"><Label>{lang === "ar" ? "بصمة المعاملة (TXID)" : "Transaction hash (TXID)"}</Label><Input value={txHash} onChange={e => setTxHash(e.target.value)} placeholder="64-character transaction hash" autoComplete="off" spellCheck={false} required /></div><button type="submit" disabled={depositBusy || !depositAddress?.address} className="w-full rounded-xl bg-gradient-gold py-3 font-semibold text-primary-foreground disabled:opacity-60">{depositBusy ? (lang === "ar" ? "جارٍ الإرسال..." : "Submitting...") : (lang === "ar" ? "إرسال للتحقق" : "Submit for verification")}</button></form>
+        <div className="space-y-2"><h3 className="font-semibold">{lang === "ar" ? "سجل الإيداعات" : "Deposit history"}</h3>{depositsError && <p className="text-sm text-destructive">{lang === "ar" ? "تعذر تحميل سجل الإيداعات." : "Could not load deposits."}</p>}{deposits?.map(d => <div key={d.id} className="space-y-1 rounded-xl border border-border p-3"><div className="flex flex-wrap justify-between gap-2"><span className="font-semibold">{Number(d.amount_confirmed ?? d.amount_claimed)} USDT</span><StatusBadge s={d.status} /></div>{d.tx_hash && <a className="break-all text-xs underline" href={`https://tronscan.org/#/transaction/${d.tx_hash}`} target="_blank" rel="noreferrer">{lang === "ar" ? "عرض المعاملة على TronScan" : "View on TronScan"}</a>}{d.admin_note && <p className="text-sm text-muted-foreground">{d.admin_note}</p>}</div>)}</div>
+      </section>
 
       <section className="space-y-3 rounded-2xl border border-border bg-card p-5">
         <h2 className="text-lg font-bold">
