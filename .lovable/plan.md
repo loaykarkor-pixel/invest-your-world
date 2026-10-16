@@ -1,181 +1,215 @@
 # Al Rayyan Real Estate Investment — Platform Upgrade Plan
 
-## What this does
+## What this builds
 
-Upgrades the existing INVESTERRA project into **Al Rayyan Real Estate Investment** (الريان للاستثمار العقاري), adding a financial ledger, deposit/withdrawal workflows, referral system, enhanced admin dashboard, and a public landing page — without rebuilding anything from scratch.
+Upgrades the existing project into **Al Rayyan Real Estate Investment** (الريان للاستثمار العقاري), adding a financial ledger, deposit/withdrawal workflows, referral system, enhanced admin dashboard, public landing page, legal pages, and strict test/production separation — without rebuilding anything from scratch.
+
+All real-money operations remain **disabled by default**. A production activation checklist in the admin panel lists every prerequisite that must be verified before going live.
 
 ---
 
 ## Phase 1 — Branding & Public Landing Page
 
-**Rename throughout:**
-- App name → "Al Rayyan" / "الريان للاستثمار العقاري"
-- Update `APP_NAME` in `src/lib/config.ts`, all `head()` titles, logo text, and i18n strings
+**Rename throughout:** App name → "Al Rayyan" / "الريان للاستثمار العقاري"
+- Update `APP_NAME` in `src/lib/config.ts`, all `head()` titles, logo text, i18n strings
 
 **Redesign `src/routes/index.tsx`:**
 - Hero section with name + tagline in Arabic/English
 - Featured real estate projects loaded from the database (public read)
-- Investment process explainer (4 steps)
-- Hypothetical income calculator (enter amount, pick project, see estimated return)
-- Prominent disclaimer that returns are not guaranteed
-- FAQ accordion (5–7 questions about the platform, fees, risks)
-- Links to Terms, Privacy Policy, Risk Disclosure (static pages)
+- Investment process explainer (4 steps: Register → Browse → Invest → Track)
+- Hypothetical income calculator — enter amount, pick project, see estimated return
+- Prominent disclaimer: returns are **not guaranteed**; estimates are based on stated assumptions only
+- FAQ accordion (platform, fees, risks, withdrawal conditions)
+- Links to Terms, Privacy Policy, Risk Disclosure static pages
 - Registration / Login CTAs
+- No fabricated regulatory badges, license numbers, or guaranteed return figures
 
-**New static pages:**
-- `/terms` — Terms & Conditions placeholder
-- `/privacy` — Privacy Policy placeholder
-- `/risk` — Risk Disclosure placeholder
+**New static pages:** `/terms`, `/privacy`, `/risk`
+- Each clearly labelled as a placeholder requiring legal review before production
+- Honest language: no guaranteed returns, no fabricated regulatory approvals
 
 ---
 
 ## Phase 2 — Database Schema
 
-New tables added via migration (existing tables preserved):
+New tables added via migration (existing tables unchanged):
 
 | Table | Purpose |
 |---|---|
-| `ledger_accounts` | One row per user: available, reserved, invested balances (NUMERIC) |
-| `ledger_entries` | Immutable transaction log (type, amount, ref, user, timestamp) |
-| `deposit_requests` | Deposit initiation records with status |
-| `withdrawal_requests` | Withdrawal requests with approval workflow |
-| `referrals` | Who referred whom |
-| `referral_commissions` | Commission records per qualifying investment |
-| `audit_log` | Admin/system actions log |
-| `platform_config` | Key/value store for admin-configurable settings (commission rate, deposit enabled, etc.) |
+| `ledger_accounts` | One row per user: `available`, `reserved`, `invested` balances (NUMERIC(20,8)); `is_test` flag |
+| `ledger_entries` | Append-only transaction log — no UPDATE/DELETE policy; trigger blocks modifications |
+| `deposit_requests` | Deposit records; `tx_hash + network` UNIQUE to prevent double-credit |
+| `withdrawal_requests` | Withdrawal requests with atomic fund reservation and approval workflow |
+| `referrals` | Who referred whom (no self-referrals enforced in DB function) |
+| `referral_commissions` | Commission per qualifying investment; one per referred user max |
+| `audit_log` | Admin/system action log — actor, timestamp, action, outcome, ref |
+| `platform_config` | Key/value: `deposits_enabled`, `withdrawals_enabled`, `operating_mode` (test/production), `commission_rate_pct`, `usdt_trc20_address`, `production_checklist` |
 
-Key safety constraints:
-- `ledger_entries` has no UPDATE or DELETE policy — append-only
-- `deposit_requests.tx_hash` unique per network (prevents double-credit)
-- All balance mutations go through server functions, not direct client writes
-- `platform_config` has a `deposits_enabled` and `withdrawals_enabled` flag (default false)
-
-RLS on all new tables with same pattern as existing (own-row read, admin read-all).
+**Safety constraints:**
+- `ledger_entries` blocked from client writes by RLS (no insert policy for users, only via SECURITY DEFINER functions)
+- `deposit_requests.tx_hash + network` UNIQUE constraint
+- `platform_config` admin-write only
+- Test and production ledger entries are separated by `is_test` flag — they can never be mixed
 
 ---
 
-## Phase 3 — Financial Engine (Server Functions)
+## Phase 3 — Financial Engine (Server Functions + SQL Functions)
 
-New server functions in `src/lib/`:
-
-- `ledger.functions.ts` — `getMyBalance()`, `getMyLedger()`
-- `deposit.functions.ts` — `createDepositRequest()`, `adminReviewDeposit()`
-- `withdrawal.functions.ts` — `createWithdrawalRequest()`, `adminReviewWithdrawal()`
-- `referral.functions.ts` — `getMyReferralInfo()`, `getReferralStats()`
-
-Balance mutations use `BEGIN/COMMIT` equivalent via Supabase RPC (SQL functions) to keep them atomic.
-
-New SQL functions:
-- `credit_ledger(_user_id, _amount, _type, _ref)` — SECURITY DEFINER, appends entry + updates account
+**New SQL functions (SECURITY DEFINER, server-side only):**
+- `credit_ledger(_user_id, _amount, _type, _ref, _is_test)` — appends entry + updates account atomically
 - `reserve_funds(_user_id, _amount, _ref)` — moves available → reserved atomically
-- `release_reserved(_user_id, _amount, _ref)` — releases reserved funds
-- `approve_deposit(_deposit_id)` — admin-only, credits ledger
-- `reject_deposit(_deposit_id, _note)` — admin-only, sets rejected
+- `release_reserved(_user_id, _amount, _ref)` — releases reserved funds on rejection/failure
+- `approve_deposit(_deposit_id)` — admin-only, idempotent, credits ledger; blocked if `deposits_enabled = false` in production mode
+- `reject_deposit(_deposit_id, _note)` — marks rejected, writes audit log
 - `approve_withdrawal(_withdrawal_id)` — admin-only, reserves then marks approved
 - `reject_withdrawal(_withdrawal_id, _note)` — releases reserved, marks rejected
-- `award_referral_commission(_investment_id)` — called when investment becomes active
+- `award_referral_commission(_investment_id)` — called on investment activation; checks eligibility, prevents duplicates
+
+**New server functions:**
+- `src/lib/ledger.functions.ts` — `getMyBalance()`, `getMyLedger()`
+- `src/lib/deposit.functions.ts` — `createDepositRequest()`, `adminReviewDeposit()`
+- `src/lib/withdrawal.functions.ts` — `createWithdrawalRequest()`, `adminReviewWithdrawal()`
+- `src/lib/referral.functions.ts` — `getMyReferralInfo()`, `adminMarkCommissionPaid()`
 
 ---
 
 ## Phase 4 — Investor-Facing Pages
 
-**Enhanced Dashboard (`/dashboard`):**
-- Available balance, invested balance, reserved balance (from ledger)
-- Realized distributions (currently zero, displayed honestly)
-- Estimated monthly/annual income (clearly labelled "estimated, not guaranteed")
+**Enhanced Dashboard `/dashboard`:**
+- Available / Reserved / Invested balances (from ledger — clearly labelled)
+- Estimated monthly/annual income (labelled "estimated, not guaranteed")
+- Distributions received (shows $0 until real distributions are recorded)
 - Active investments list
 - Referral quick-stats widget
+- **Operating mode banner**: if `operating_mode = test`, shows a prominent banner — "TEST MODE — balances are simulated and not real funds"
 
-**New: Deposit Page (`/deposit`):**
-- Shows `deposits_enabled` gate (if disabled: "Deposits not yet open — coming soon")
-- Deposit amount input
-- Displays USDT TRC20 company address (from server-side config, not hardcoded)
-- Network warning banner
-- TXID input
-- Creates `deposit_request` record (status: pending)
-- Note: funds credited only after admin approval
+**Deposit Page `/deposit`:**
+- If `deposits_enabled = false`: shows "Deposits not yet open — configuration in progress" — no wallet address shown
+- If `deposits_enabled = true` and `operating_mode = test`: shows TEST MODE banner, fake test address
+- Company wallet address served from server-side config only (never hardcoded in frontend)
+- Network warning: "Only TRC20 (Tron). Other networks will result in permanent loss."
+- TXID input → creates `deposit_request` (status: pending_review)
+- Clear message: "Funds credited only after manual verification by the team"
+- No blockchain auto-verification in this phase (requires TronGrid API key)
 
-**New: Withdrawal Page (`/withdraw`):**
-- Shows `withdrawals_enabled` gate
-- Shows available balance
-- Amount input (max = available)
-- Destination TRC20 address input + address validation
-- Creates `withdrawal_request` (status: pending, reserves funds atomically)
-- Clear message that withdrawal requires review
+**Withdrawal Page `/withdraw`:**
+- If `withdrawals_enabled = false`: shows "Withdrawals not yet open"
+- Shows available balance; input capped at available
+- Destination address input + TRC20 format hint
+- Creates `withdrawal_request`, reserves funds atomically
+- Status: pending_review → approved → processing → completed (or rejected/failed)
+- Clear message: "Withdrawals require review before processing"
 
-**New: Referral Page (`/referral`):**
-- Unique referral link (`?ref=<user_id_prefix>`)
-- Stats: total referred, eligible investments, pending/paid commissions
+**Referral Page `/referral`:**
+- Unique referral link (`?ref=<short_code>`)
+- Stats: referred users, eligible investments, pending/paid commissions
 - Commission history table
-- Disclosure of commission terms
+- Disclosure of terms and eligibility rules
 
-**Property Detail Page (`/property/$id`):**
-- Full description, images, terms, funding progress
+**Property Detail Page `/property/$id`:**
+- Full description, location, images, funding progress
+- Investment terms, minimum, duration, expected yield (with assumptions stated)
 - Risk disclosures section
-- Investment button → `/invest?type=property&id=X`
+- Legal structure note (placeholder until legal docs are supplied)
+- Invest button → `/invest?type=property&id=X`
+- Only published properties shown (admin sets `is_active`)
 
 ---
 
 ## Phase 5 — Enhanced Admin Dashboard
 
-Extended `/admin` page (tab layout):
+Tab layout on `/admin`:
 
 | Tab | Content |
 |---|---|
-| Payments | Existing payment review (keep current) |
-| Deposits | Review deposit requests, approve/reject |
-| Withdrawals | Review withdrawal requests, approve/reject |
-| Users | List users, view balances |
-| Projects | List/edit properties (title, yield, status, images) |
+| Overview | Pending counts, total deposits, withdrawal queue |
+| Deposits | Review deposit requests — approve/reject with note |
+| Withdrawals | Review withdrawal requests — approve/reject |
+| Investments | Existing payment review (kept) |
+| Users | List users, view balances, account status |
+| Projects | Create/edit/publish/pause properties; set `is_active` |
 | Referrals | Commission records, mark paid |
-| Settings | Toggle deposits/withdrawals, set commission rate, update wallet address |
-| Audit Log | Read-only log of admin actions |
+| Settings | Operating mode display, production checklist, toggle deposits/withdrawals, commission rate, wallet address |
+| Audit Log | Read-only log of all admin actions |
 
-Property management (admin only):
-- Create/edit properties from the admin panel
-- Set `is_active` flag — only active properties shown to investors
+**Production Checklist (Settings tab):**
+Each item must be manually checked by an admin before `operating_mode` can be set to `production`:
+1. Company receiving wallet address configured and verified
+2. Blockchain data provider (TronGrid) API key configured and tested
+3. Correct USDT TRC20 token contract confirmed
+4. Transaction confirmation/finality rules set
+5. Idempotency and double-credit prevention tested
+6. Withdrawal signing and security review completed
+7. RLS and authorization end-to-end test passed
+8. Legal, licensing, and compliance review completed
+
+Until all 8 are checked: "Switch to Production" button is disabled and greyed out with explanation.
+
+**Operating mode badge** displayed in admin header: `TEST MODE` (orange) or `PRODUCTION` (green). Test deposits/withdrawals never touch real funds.
 
 ---
 
 ## Phase 6 — Referral System
 
-- Referral code = first 8 chars of user UUID (stored, unique)
-- Landing page reads `?ref=CODE` query param → stores in sessionStorage
-- On registration: resolves referral code → inserts `referrals` row
-- On investment activation (admin approves payment): checks for referral, creates `referral_commissions` record (10% of investment, status: pending)
-- Admin marks commission paid → updates record, credits referred-user's ledger
-
-Abuse prevention:
-- No self-referral (checked in DB function)
-- One commission per referred user's first qualifying investment only
-- Commission rate from `platform_config`, not hardcoded
+- Short code = first 8 chars of user UUID, stored in `profiles.referral_code` (unique index)
+- Landing page reads `?ref=CODE` → stored in `sessionStorage`
+- On registration: resolves code → inserts `referrals` row (DB function prevents self-referral)
+- On investment activation: `award_referral_commission()` checks: first investment of referred user, not self-referral, no existing commission → creates `referral_commissions` record (10% of investment amount, configurable via `platform_config`)
+- Admin marks paid → credits referrer's ledger
+- No commissions for registration alone or unverified deposits
 
 ---
 
-## Phase 7 — i18n & Strings
+## Phase 7 — Legal & Disclosure Pages
 
-Add all new strings to `src/lib/i18n.tsx` in both Arabic and English:
-- Deposit, withdrawal, referral, balance, commission, ledger terms
-- All status labels (pending, approved, processing, completed, rejected, failed)
-- All disclaimer and legal notice strings
-- Platform-disabled messages
+All pages clearly labelled "DRAFT — requires legal review before production":
+
+- `/terms` — Terms & Conditions (placeholder with required sections listed)
+- `/privacy` — Privacy Policy (placeholder)
+- `/risk` — Risk Disclosure (explicit: returns not guaranteed, capital at risk, no FDIC/FSCS)
+
+Investment calculator on landing page includes:
+- "These figures are hypothetical estimates based on stated assumptions. Past performance does not predict future results. Capital is at risk."
+
+No guaranteed return percentages anywhere in the UI.
+
+---
+
+## Phase 8 — i18n
+
+All new strings added to `src/lib/i18n.tsx` in both Arabic and English:
+- Balance categories, deposit/withdrawal statuses, referral terms
+- Legal disclaimers, test mode banners, production checklist labels
+- All error and validation messages
 
 ---
 
 ## Technical Notes
 
-- All balance reads and mutations go through `requireSupabaseAuth` server functions — no direct client table writes for financial data
-- `ledger_entries` is append-only at the database level (no UPDATE/DELETE policy, trigger blocks it)
-- `deposit_requests.tx_hash + network` has a UNIQUE constraint to prevent double-credit
-- `platform_config` is seeded with `deposits_enabled = false`, `withdrawals_enabled = false`, `commission_rate_pct = 10`
-- Existing `investments` and `payments` tables kept unchanged; new ledger runs alongside and will be reconciled when deposits go live
-- Blockchain verification (TronGrid API) is scaffolded but gated behind `deposits_enabled` — the API key slot is prepared but deposits stay manual-review until the key is provided
-- No fabricated properties, regulatory badges, or sample balances labelled as real
+- Test and production balances are **structurally separated** (`is_test` column) — no query can accidentally mix them
+- `ledger_entries` is append-only at DB level (trigger raises exception on UPDATE/DELETE)
+- `deposit_requests.tx_hash + network` UNIQUE constraint prevents double-credit
+- `platform_config` is admin-write only (RLS + server function)
+- Public users cannot read or write `platform_config`
+- Existing `investments` and `payments` tables kept unchanged; new ledger is additive
+- Blockchain verification scaffolded but not activated — `deposits_enabled` stays false until TronGrid API key is provided and tested
+- No wallet addresses hardcoded — served from `platform_config` via server function only
+
+## What remains disabled pending verification
+
+| Feature | Blocker |
+|---|---|
+| Real deposits | Company wallet address + TronGrid API key + security test |
+| Real withdrawals | Signing mechanism + security review |
+| Blockchain auto-verification | TronGrid API key |
+| Production mode | All 8 checklist items |
+| Legal pages | Legal counsel review |
+| Real referral payouts | Withdrawal system live |
 
 ## Files Changed
 
-**New routes:** `/deposit`, `/withdraw`, `/referral`, `/property/$id`, `/terms`, `/privacy`, `/risk`  
-**Modified routes:** `/`, `/dashboard`, `/admin`, `/invest`  
-**New libs:** `src/lib/ledger.functions.ts`, `src/lib/deposit.functions.ts`, `src/lib/withdrawal.functions.ts`, `src/lib/referral.functions.ts`  
-**Modified:** `src/lib/i18n.tsx`, `src/lib/config.ts`, `src/lib/data.ts`, `src/components/AppShell.tsx`  
-**New migration:** ledger, deposits, withdrawals, referrals, commissions, audit_log, platform_config tables + SQL functions
+**New routes:** `/deposit`, `/withdraw`, `/referral`, `/property/$id`, `/terms`, `/privacy`, `/risk`
+**Modified routes:** `/` (landing), `/dashboard`, `/admin`, `/invest`
+**New libs:** `ledger.functions.ts`, `deposit.functions.ts`, `withdrawal.functions.ts`, `referral.functions.ts`
+**Modified:** `i18n.tsx`, `config.ts`, `data.ts`, `AppShell.tsx`
+**New migration:** 8 new tables + 8 SQL functions + RLS policies
