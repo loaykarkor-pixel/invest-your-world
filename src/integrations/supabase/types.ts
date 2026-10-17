@@ -14,6 +14,98 @@ export type Database = {
   }
   public: {
     Tables: {
+      bitcoin_deposit_addresses: {
+        Row: {
+          active: boolean
+          address: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          derivation_index: number | null
+          id: string
+          network: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          address: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          derivation_index?: number | null
+          id?: string
+          network?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          address?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          derivation_index?: number | null
+          id?: string
+          network?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bitcoin_deposit_requests: {
+        Row: {
+          admin_note: string | null
+          amount_claimed: number
+          amount_confirmed: number | null
+          created_at: string
+          currency: string
+          deposit_address: string
+          id: string
+          network: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          tx_hash: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount_claimed: number
+          amount_confirmed?: number | null
+          created_at?: string
+          currency?: string
+          deposit_address: string
+          id?: string
+          network?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tx_hash?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount_claimed?: number
+          amount_confirmed?: number | null
+          created_at?: string
+          currency?: string
+          deposit_address?: string
+          id?: string
+          network?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tx_hash?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bitcoin_deposit_address_fk"
+            columns: ["deposit_address"]
+            isOneToOne: false
+            referencedRelation: "bitcoin_deposit_addresses"
+            referencedColumns: ["address"]
+          },
+        ]
+      }
       deposit_addresses: {
         Row: {
           active: boolean
@@ -417,6 +509,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      review_bitcoin_deposit_request: {
+        Args: {
+          _confirm: boolean
+          _confirmed_amount?: number
+          _note?: string
+          _request_id: string
+        }
+        Returns: undefined
       }
       review_deposit_request: {
         Args: {
