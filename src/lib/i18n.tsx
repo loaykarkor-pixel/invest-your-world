@@ -3,6 +3,17 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 export type Lang = "ar" | "en";
 
 const dict = {
+  cryptoUnconfigured: { en: "Payment integration unconfigured — real deposits and withdrawals disabled. Manual verification only.", ar: "الدفع غير مهيأ — الإيداع والسحب الحقيقيان معطلان. التحقق يدوي فقط." },
+  cryptoTest: { en: "TEST MODE — simulated balances only. Do not send cryptocurrency. Manual verification only.", ar: "وضع الاختبار — أرصدة محاكاة فقط. لا ترسل عملات رقمية. التحقق يدوي فقط." },
+  cryptoUnavailable: { en: "Payment status unavailable — operations disabled.", ar: "تعذر تحديد حالة الدفع — العمليات معطلة." },
+  testBalance: { en: "Test balances (not real funds)", ar: "أرصدة الاختبار (ليست أموالاً حقيقية)" },
+  approvalNotPaid: { en: "Approved for review — not paid", ar: "موافقة للمراجعة — لم يتم الدفع" },
+  pending_verification: { en: "Pending manual verification", ar: "بانتظار التحقق اليدوي" },
+  approved: { en: "Approved — not paid", ar: "موافقة — غير مدفوع" },
+  paid: { en: "Paid", ar: "مدفوع" },
+  cancelled: { en: "Cancelled", ar: "ملغي" },
+  verificationEvidence: { en: "Record the explorer, TXID, recipient, amount and confirmation evidence (minimum 10 characters).", ar: "سجل مستكشف الشبكة ومعرف المعاملة والمستلم والمبلغ ودليل التأكيد (10 أحرف على الأقل)." },
+  depositCreditResult: { en: "Review saved; confirmed test deposits are credited exactly once to the test ledger.", ar: "حُفظت المراجعة؛ الإيداع التجريبي المؤكد يُضاف مرة واحدة فقط إلى السجل التجريبي." },
   headline: { en: "Invest in Your Financial Future", ar: "استثمر بذكاء، وابنِ مستقبلك المالي" },
   sub: {
     en: "Global stocks and fractional premium real estate — in one secure portfolio.",

@@ -12,3 +12,7 @@
 - UI strings live in src/lib/i18n.tsx (ar/en dict); add both languages for every new string — app is bilingual RTL/LTR.
 - Crypto payment approval runs through the review_payment SQL function so only admins can activate investments.
 - New signups only get the "user" role; admins are granted manually in user_roles (never automatically).
+
+- Crypto schema changes are applied through Cloud migrations; keep existing historical migrations byte-identical so applied history remains identifiable.
+- Crypto credits and withdrawal reservations are database-owned, use exact NUMERIC amounts and explicit test flags; browser balances use the server's decimal strings to avoid mixed funds and rounding.
+- Production crypto operations stay database-blocked until a separately reviewed activation change; approval is a review state and never a payout.

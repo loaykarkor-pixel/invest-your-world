@@ -6,3 +6,7 @@
 - [x] Verify auth + report
 - [x] Admin moved to ryad0534621@gmail.com; removed from fadelryad3@gmail.com
 - [ ] Real wallet addresses (blocked: waiting on user)
+- [ ] Apply missing BTC migrations to this project's Cloud database
+- [ ] Enforce transaction-bound, exactly-once BTC/USDT credits and disable real-money operations
+- [ ] Protect withdrawal reservations and distinguish approval from payout
+- [ ] Verify database permissions, financial tests, and signed-in transaction/admin screens

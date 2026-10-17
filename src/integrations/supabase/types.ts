@@ -14,6 +14,215 @@ export type Database = {
   }
   public: {
     Tables: {
+      bitcoin_deposit_addresses: {
+        Row: {
+          active: boolean
+          address: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          derivation_index: number | null
+          id: string
+          network: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          address: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          derivation_index?: number | null
+          id?: string
+          network?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          address?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          derivation_index?: number | null
+          id?: string
+          network?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bitcoin_deposit_requests: {
+        Row: {
+          admin_note: string | null
+          amount_claimed: number
+          amount_confirmed: number | null
+          created_at: string
+          currency: string
+          deposit_address: string
+          id: string
+          is_test: boolean
+          network: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          tx_hash: string | null
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          amount_claimed: number
+          amount_confirmed?: number | null
+          created_at?: string
+          currency?: string
+          deposit_address: string
+          id?: string
+          is_test?: boolean
+          network?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tx_hash?: string | null
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          amount_claimed?: number
+          amount_confirmed?: number | null
+          created_at?: string
+          currency?: string
+          deposit_address?: string
+          id?: string
+          is_test?: boolean
+          network?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tx_hash?: string | null
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bitcoin_deposit_address_fk"
+            columns: ["deposit_address"]
+            isOneToOne: false
+            referencedRelation: "bitcoin_deposit_addresses"
+            referencedColumns: ["address"]
+          },
+        ]
+      }
+      crypto_operation_settings: {
+        Row: {
+          deposits_enabled: boolean
+          operating_mode: string
+          singleton: boolean
+          updated_at: string
+          withdrawals_enabled: boolean
+        }
+        Insert: {
+          deposits_enabled?: boolean
+          operating_mode?: string
+          singleton?: boolean
+          updated_at?: string
+          withdrawals_enabled?: boolean
+        }
+        Update: {
+          deposits_enabled?: boolean
+          operating_mode?: string
+          singleton?: boolean
+          updated_at?: string
+          withdrawals_enabled?: boolean
+        }
+        Relationships: []
+      }
+      deposit_addresses: {
+        Row: {
+          active: boolean
+          address: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          network: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          address: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          network?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          address?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          network?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      deposit_requests: {
+        Row: {
+          admin_note: string | null
+          amount_claimed: number
+          amount_confirmed: number | null
+          created_at: string
+          currency: string
+          deposit_address: string
+          id: string
+          is_test: boolean
+          network: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          tx_hash: string | null
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          amount_claimed: number
+          amount_confirmed?: number | null
+          created_at?: string
+          currency?: string
+          deposit_address: string
+          id?: string
+          is_test?: boolean
+          network?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tx_hash?: string | null
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          amount_claimed?: number
+          amount_confirmed?: number | null
+          created_at?: string
+          currency?: string
+          deposit_address?: string
+          id?: string
+          is_test?: boolean
+          network?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tx_hash?: string | null
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       investments: {
         Row: {
           amount: number
@@ -114,81 +323,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      deposit_addresses: {
-        Row: { id: string; user_id: string; network: string; currency: string; address: string; active: boolean; created_at: string; created_by: string | null }
-        Insert: { id?: string; user_id: string; network?: string; currency?: string; address: string; active?: boolean; created_at?: string; created_by?: string | null }
-        Update: { id?: string; user_id?: string; network?: string; currency?: string; address?: string; active?: boolean; created_at?: string; created_by?: string | null }
-        Relationships: []
-      }
-      deposit_requests: {
-        Row: { id: string; user_id: string; amount_claimed: number; amount_confirmed: number | null; currency: string; network: string; deposit_address: string; tx_hash: string | null; status: string; admin_note: string | null; created_at: string; reviewed_at: string | null; verified_at: string | null; reviewed_by: string | null }
-        Insert: { id?: string; user_id: string; amount_claimed: number; amount_confirmed?: number | null; currency?: string; network?: string; deposit_address: string; tx_hash?: string | null; status?: string; admin_note?: string | null; created_at?: string; reviewed_at?: string | null; verified_at?: string | null; reviewed_by?: string | null }
-        Update: { id?: string; user_id?: string; amount_claimed?: number; amount_confirmed?: number | null; currency?: string; network?: string; deposit_address?: string; tx_hash?: string | null; status?: string; admin_note?: string | null; created_at?: string; reviewed_at?: string | null; verified_at?: string | null; reviewed_by?: string | null }
-        Relationships: []
-      }
-      bitcoin_deposit_addresses: {
-        Row: { id: string; user_id: string; network: string; currency: string; address: string; derivation_index: number | null; active: boolean; created_at: string; created_by: string | null }
-        Insert: { id?: string; user_id: string; network?: string; currency?: string; address: string; derivation_index?: number | null; active?: boolean; created_at?: string; created_by?: string | null }
-        Update: { id?: string; user_id?: string; network?: string; currency?: string; address?: string; derivation_index?: number | null; active?: boolean; created_at?: string; created_by?: string | null }
-        Relationships: []
-      }
-      bitcoin_deposit_requests: {
-        Row: { id: string; user_id: string; amount_claimed: number; amount_confirmed: number | null; currency: string; network: string; deposit_address: string; tx_hash: string | null; status: string; admin_note: string | null; created_at: string; reviewed_at: string | null; reviewed_by: string | null }
-        Insert: { id?: string; user_id: string; amount_claimed: number; amount_confirmed?: number | null; currency?: string; network?: string; deposit_address: string; tx_hash?: string | null; status?: string; admin_note?: string | null; created_at?: string; reviewed_at?: string | null; reviewed_by?: string | null }
-        Update: { id?: string; user_id?: string; amount_claimed?: number; amount_confirmed?: number | null; currency?: string; network?: string; deposit_address?: string; tx_hash?: string | null; status?: string; admin_note?: string | null; created_at?: string; reviewed_at?: string | null; reviewed_by?: string | null }
-        Relationships: []
-      }
-      wallet_ledger: {
-        Row: { id: string; user_id: string; entry_type: string; amount: number; currency: string; reference_id: string; note: string | null; created_at: string; created_by: string | null }
-        Insert: { id?: string; user_id: string; entry_type: string; amount: number; currency?: string; reference_id: string; note?: string | null; created_at?: string; created_by?: string | null }
-        Update: { id?: string; user_id?: string; entry_type?: string; amount?: number; currency?: string; reference_id?: string; note?: string | null; created_at?: string; created_by?: string | null }
-        Relationships: []
-      }
-      withdrawal_requests: {
-        Row: {
-          admin_note: string | null
-          amount: number
-          created_at: string
-          currency: string
-          destination_address: string
-          id: string
-          network: string
-          paid_at: string | null
-          reviewed_at: string | null
-          status: string
-          transaction_hash: string | null
-          user_id: string
-        }
-        Insert: {
-          admin_note?: string | null
-          amount: number
-          created_at?: string
-          currency?: string
-          destination_address: string
-          id?: string
-          network?: string
-          paid_at?: string | null
-          reviewed_at?: string | null
-          status?: string
-          transaction_hash?: string | null
-          user_id: string
-        }
-        Update: {
-          admin_note?: string | null
-          amount?: number
-          created_at?: string
-          currency?: string
-          destination_address?: string
-          id?: string
-          network?: string
-          paid_at?: string | null
-          reviewed_at?: string | null
-          status?: string
-          transaction_hash?: string | null
-          user_id?: string
-        }
-        Relationships: []
       }
       profiles: {
         Row: {
@@ -316,21 +450,102 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_ledger: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          entry_type: string
+          id: string
+          is_test: boolean
+          note: string | null
+          reference_id: string
+          tx_hash: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          entry_type: string
+          id?: string
+          is_test?: boolean
+          note?: string | null
+          reference_id: string
+          tx_hash?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          entry_type?: string
+          id?: string
+          is_test?: boolean
+          note?: string | null
+          reference_id?: string
+          tx_hash?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      withdrawal_requests: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          currency: string
+          destination_address: string
+          id: string
+          is_test: boolean
+          network: string
+          paid_at: string | null
+          reviewed_at: string | null
+          status: string
+          transaction_hash: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount: number
+          created_at?: string
+          currency?: string
+          destination_address: string
+          id?: string
+          is_test?: boolean
+          network?: string
+          paid_at?: string | null
+          reviewed_at?: string | null
+          status?: string
+          transaction_hash?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          destination_address?: string
+          id?: string
+          is_test?: boolean
+          network?: string
+          paid_at?: string | null
+          reviewed_at?: string | null
+          status?: string
+          transaction_hash?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      review_deposit_request: { Args: { _request_id: string; _confirm: boolean; _confirmed_amount?: number | null; _note?: string | null }; Returns: undefined }\n      review_withdrawal_request: {
-        Args: {
-          _request_id: string
-          _approve: boolean
-          _note?: string | null
-        }
-        Returns: undefined
-      }
-
-      review_bitcoin_deposit_request: { Args: { _request_id: string; _confirm: boolean; _confirmed_amount?: number | null; _note?: string | null }; Returns: undefined }
+      crypto_operation_status: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -338,8 +553,45 @@ export type Database = {
         }
         Returns: boolean
       }
+      my_crypto_balances: { Args: never; Returns: Json }
+      request_usdt_withdrawal: {
+        Args: { _amount: number; _destination_address: string }
+        Returns: string
+      }
+      review_bitcoin_deposit_request: {
+        Args: {
+          _confirm: boolean
+          _confirmed_amount?: number
+          _note?: string
+          _request_id: string
+        }
+        Returns: undefined
+      }
+      review_crypto_deposit_internal: {
+        Args: {
+          _amount: number
+          _asset: string
+          _confirm: boolean
+          _id: string
+          _note: string
+        }
+        Returns: undefined
+      }
+      review_deposit_request: {
+        Args: {
+          _confirm: boolean
+          _confirmed_amount?: number
+          _note?: string
+          _request_id: string
+        }
+        Returns: undefined
+      }
       review_payment: {
         Args: { _approve: boolean; _note?: string; _payment_id: string }
+        Returns: undefined
+      }
+      review_withdrawal_request: {
+        Args: { _approve: boolean; _note?: string; _request_id: string }
         Returns: undefined
       }
     }

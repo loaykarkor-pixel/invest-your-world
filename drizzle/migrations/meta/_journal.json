@@ -15,6 +15,34 @@
       "when": 1792067122645,
       "tag": "0001_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792254629524,
+      "tag": "0002_bitcoin_mainnet_deposits",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792254649498,
+      "tag": "0003_credit_verified_bitcoin_deposits",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792254669157,
+      "tag": "0004_secure_usdt_wallet_flows",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792254764892,
+      "tag": "0005_crypto_integrity_and_modes",
+      "breakpoints": true
     }
   ]
 }
