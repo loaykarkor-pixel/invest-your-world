@@ -36,6 +36,13 @@
       "when": 1792254669157,
       "tag": "0004_secure_usdt_wallet_flows",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792254764892,
+      "tag": "0005_crypto_integrity_and_modes",
+      "breakpoints": true
     }
   ]
 }

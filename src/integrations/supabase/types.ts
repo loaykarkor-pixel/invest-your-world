@@ -59,12 +59,14 @@ export type Database = {
           currency: string
           deposit_address: string
           id: string
+          is_test: boolean
           network: string
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
           tx_hash: string | null
           user_id: string
+          verified_at: string | null
         }
         Insert: {
           admin_note?: string | null
@@ -74,12 +76,14 @@ export type Database = {
           currency?: string
           deposit_address: string
           id?: string
+          is_test?: boolean
           network?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
           tx_hash?: string | null
           user_id: string
+          verified_at?: string | null
         }
         Update: {
           admin_note?: string | null
@@ -89,12 +93,14 @@ export type Database = {
           currency?: string
           deposit_address?: string
           id?: string
+          is_test?: boolean
           network?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
           tx_hash?: string | null
           user_id?: string
+          verified_at?: string | null
         }
         Relationships: [
           {
@@ -105,6 +111,30 @@ export type Database = {
             referencedColumns: ["address"]
           },
         ]
+      }
+      crypto_operation_settings: {
+        Row: {
+          deposits_enabled: boolean
+          operating_mode: string
+          singleton: boolean
+          updated_at: string
+          withdrawals_enabled: boolean
+        }
+        Insert: {
+          deposits_enabled?: boolean
+          operating_mode?: string
+          singleton?: boolean
+          updated_at?: string
+          withdrawals_enabled?: boolean
+        }
+        Update: {
+          deposits_enabled?: boolean
+          operating_mode?: string
+          singleton?: boolean
+          updated_at?: string
+          withdrawals_enabled?: boolean
+        }
+        Relationships: []
       }
       deposit_addresses: {
         Row: {
@@ -148,6 +178,7 @@ export type Database = {
           currency: string
           deposit_address: string
           id: string
+          is_test: boolean
           network: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -164,6 +195,7 @@ export type Database = {
           currency?: string
           deposit_address: string
           id?: string
+          is_test?: boolean
           network?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -180,6 +212,7 @@ export type Database = {
           currency?: string
           deposit_address?: string
           id?: string
+          is_test?: boolean
           network?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -425,8 +458,10 @@ export type Database = {
           currency: string
           entry_type: string
           id: string
+          is_test: boolean
           note: string | null
           reference_id: string
+          tx_hash: string | null
           user_id: string
         }
         Insert: {
@@ -436,8 +471,10 @@ export type Database = {
           currency?: string
           entry_type: string
           id?: string
+          is_test?: boolean
           note?: string | null
           reference_id: string
+          tx_hash?: string | null
           user_id: string
         }
         Update: {
@@ -447,8 +484,10 @@ export type Database = {
           currency?: string
           entry_type?: string
           id?: string
+          is_test?: boolean
           note?: string | null
           reference_id?: string
+          tx_hash?: string | null
           user_id?: string
         }
         Relationships: []
@@ -461,6 +500,7 @@ export type Database = {
           currency: string
           destination_address: string
           id: string
+          is_test: boolean
           network: string
           paid_at: string | null
           reviewed_at: string | null
@@ -475,6 +515,7 @@ export type Database = {
           currency?: string
           destination_address: string
           id?: string
+          is_test?: boolean
           network?: string
           paid_at?: string | null
           reviewed_at?: string | null
@@ -489,6 +530,7 @@ export type Database = {
           currency?: string
           destination_address?: string
           id?: string
+          is_test?: boolean
           network?: string
           paid_at?: string | null
           reviewed_at?: string | null
@@ -503,6 +545,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      crypto_operation_status: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -510,6 +553,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      my_crypto_balances: { Args: never; Returns: Json }
       request_usdt_withdrawal: {
         Args: { _amount: number; _destination_address: string }
         Returns: string
@@ -520,6 +564,16 @@ export type Database = {
           _confirmed_amount?: number
           _note?: string
           _request_id: string
+        }
+        Returns: undefined
+      }
+      review_crypto_deposit_internal: {
+        Args: {
+          _amount: number
+          _asset: string
+          _confirm: boolean
+          _id: string
+          _note: string
         }
         Returns: undefined
       }
