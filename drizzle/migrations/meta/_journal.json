@@ -22,6 +22,13 @@
       "when": 1792254629524,
       "tag": "0002_bitcoin_mainnet_deposits",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792254649498,
+      "tag": "0003_credit_verified_bitcoin_deposits",
+      "breakpoints": true
     }
   ]
 }
