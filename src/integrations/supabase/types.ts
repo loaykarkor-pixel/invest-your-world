@@ -510,6 +510,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      request_usdt_withdrawal: {
+        Args: { _amount: number; _destination_address: string }
+        Returns: string
+      }
       review_bitcoin_deposit_request: {
         Args: {
           _confirm: boolean
