@@ -119,8 +119,8 @@ function Tx() {
   const { data: cryptoStatus } = useQuery(cryptoStatusQ);
   const { data: balances } = useQuery(cryptoBalancesQ);
   const isTest = cryptoStatus?.operating_mode === "test";
-  const walletBalance = balances?.usdt_real ?? "0";
-  const bitcoinBalance = balances?.btc_real ?? "0";
+  const walletBalance = balances?.["usdt_real"] ?? "0";
+  const bitcoinBalance = balances?.["btc_real"] ?? "0";
   const [bitcoinAmount, setBitcoinAmount] = useState("");
   const [bitcoinTxHash, setBitcoinTxHash] = useState("");
   const [bitcoinBusy, setBitcoinBusy] = useState(false);
@@ -243,7 +243,7 @@ function Tx() {
     <div className="space-y-8">
       <PageTitle title={t("transactions")} />
       <p role="status" className="border border-border p-4 text-primary">{t(!cryptoStatus ? "cryptoUnavailable" : isTest ? "cryptoTest" : "cryptoUnconfigured")}</p>
-      <p className="text-sm text-muted-foreground">{t("testBalance")}: {balances?.usdt_test ?? "0"} USDT · {balances?.btc_test ?? "0"} BTC</p>
+      <p className="text-sm text-muted-foreground">{t("testBalance")}: {balances?.["usdt_test"] ?? "0"} USDT · {balances?.["btc_test"] ?? "0"} BTC</p>
       <section className="rounded-2xl border border-border bg-card p-5"><p className="text-sm text-muted-foreground">{lang === "ar" ? "رصيد المحفظة المؤكد" : "Confirmed wallet balance"}</p><p className="mt-1 text-2xl font-bold">{walletBalance} USDT · {bitcoinBalance} BTC</p>{ledgerError && <p className="mt-2 text-sm text-destructive">{lang === "ar" ? "تعذر تحميل الرصيد." : "Could not load balance."}</p>}<p className="mt-2 text-xs text-muted-foreground">{lang === "ar" ? "يعكس هذا الرصيد قيود دفتر الحساب فقط؛ لا يعني وجود أموال متاحة للسحب في المحفظة الخارجية." : "This is the internal ledger balance only; it does not guarantee funds are available in the external wallet."}</p></section>
 
 
