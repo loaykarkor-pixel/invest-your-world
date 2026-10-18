@@ -70,7 +70,7 @@ function Admin() {
     if (confirm) { const entered = prompt(lang === "ar" ? "أدخل المبلغ الذي تحققت منه على الشبكة" : "Enter the amount verified on-chain", String(amount ?? "")); if (entered === null) return; confirmedAmount = Number(entered); if (!Number.isFinite(confirmedAmount) || confirmedAmount <= 0) { toast.error(lang === "ar" ? "المبلغ غير صحيح" : "Invalid amount"); return; } }
     const note = confirm ? prompt(t("verificationEvidence")) : prompt(t("reject"));
     if (confirm && (!note || note.trim().length < 10)) return;
-    const { error } = await supabase.rpc("review_deposit_request", { _request_id: id, _confirm: confirm, _confirmed_amount: confirmedAmount ?? undefined, _note: note ?? undefined });
+    const { error } = await supabase.rpc("review_deposit_request", { _request_id: id, _confirm: confirm, ...(confirmedAmount != null ? { _confirmed_amount: confirmedAmount } : {}), ...(note ? { _note: note } : {}) });
     if (error) { toast.error(error.message); return; }
     toast.success(t("depositCreditResult"));
     qc.invalidateQueries({ queryKey: ["admin-deposits"] });
@@ -94,7 +94,7 @@ function Admin() {
     const note = confirm ? prompt(t("verificationEvidence")) : prompt(t("reject"));
     if (confirm && (!note || note.trim().length < 10)) return;
     const { error } = await supabase.rpc("review_bitcoin_deposit_request", {
-      _request_id: id, _confirm: confirm, _confirmed_amount: confirmedAmount ?? undefined, _note: note ?? undefined,
+      _request_id: id, _confirm: confirm, ...(confirmedAmount != null ? { _confirmed_amount: confirmedAmount } : {}), ...(note ? { _note: note } : {}),
     });
     if (error) { toast.error(error.message); return; }
     toast.success(lang === "ar"
@@ -105,7 +105,7 @@ function Admin() {
 
   async function reviewWithdrawal(id: string, approve: boolean) {
     const note = approve ? null : prompt(lang === "ar" ? "سبب الرفض (اختياري)" : "Reason for rejection (optional)") ?? null;
-    const { error } = await supabase.rpc("review_withdrawal_request", { _request_id: id, _approve: approve, _note: note ?? undefined });
+    const { error } = await supabase.rpc("review_withdrawal_request", { _request_id: id, _approve: approve, ...(note ? { _note: note } : {}) });
     if (error) { toast.error(error.message); return; }
     toast.success(approve ? (lang === "ar" ? "موافقة للمراجعة فقط — لم يتم الدفع" : "Withdrawal approved for review only — not paid") : (lang === "ar" ? "تم رفض طلب السحب" : "Withdrawal request rejected"));
     qc.invalidateQueries({ queryKey: ["admin-withdrawals"] });
