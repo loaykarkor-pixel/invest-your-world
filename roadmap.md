@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Focused security audit: inspect authorization and money writes, safely test confirmed bugs, apply narrow fixes, report results
 - [x] Auth page: redirect when signed in, clear duplicate-email message
 - [x] Password recovery (forgot + reset page)
 - [x] Arabic/English error messages for auth
