@@ -20,7 +20,6 @@ create table if not exists public.crypto_chain_observations (
   credited_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (network, lower(tx_hash), event_index),
   constraint observation_asset_network check (
     (asset = 'USDT' and network = 'TRON_MAINNET_TRC20') or
     (asset = 'BTC' and network = 'BITCOIN_MAINNET')
@@ -28,6 +27,8 @@ create table if not exists public.crypto_chain_observations (
   constraint observations_never_credit_here check (credited_at is null)
 );
 
+create unique index if not exists crypto_chain_observations_tx_event_once
+  on public.crypto_chain_observations(network, lower(tx_hash), event_index);
 create index if not exists crypto_chain_observations_status_idx
   on public.crypto_chain_observations(chain_status, confirmations, created_at);
 create index if not exists crypto_chain_observations_user_idx
