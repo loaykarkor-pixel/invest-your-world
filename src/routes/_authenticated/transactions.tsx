@@ -174,7 +174,7 @@ function Tx() {
 
   async function submitDeposit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!isTest) { toast.error(t("cryptoUnconfigured")); return; }
+    if (!canSubmitDeposit) { toast.error(t("cryptoUnconfigured")); return; }
     const value = Number(depositAmount);
     const hash = txHash.trim();
     if (!Number.isFinite(value) || value <= 0 || !/^([0-9a-fA-F]{64})$/.test(hash)) {
@@ -196,7 +196,7 @@ function Tx() {
 
   async function submitBitcoinDeposit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!isTest) { toast.error(t("cryptoUnconfigured")); return; }
+    if (!canSubmitDeposit) { toast.error(t("cryptoUnconfigured")); return; }
     const value = Number(bitcoinAmount);
     const hash = bitcoinTxHash.trim().toLowerCase();
     if (!Number.isFinite(value) || value <= 0 || !/^[0-9a-f]{64}$/.test(hash)) {
